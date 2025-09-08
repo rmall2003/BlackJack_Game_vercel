@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: white;
+        }
+
+        .card {
+            width: 80px;
+            height: 120px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            margin-right: -20px;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-red {
+            color: #ef4444; /* red-500 */
+        }
+
+        .card-black {
+            color: #1a202c; /* black */
+        }
+
+        .card-suit-top, .card-suit-bottom {
+            font-size: 24px;
+        }
+
+        .card-rank {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .card-back {
+            background-color: #34495e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            color: #2c3e50;
+            border: 2px solid #555;
+        }
+
+        .button-primary {
+            @apply px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300;
+        }
+
+        .button-secondary {
+            @apply px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition duration-300;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #2d3748;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 flex flex-col items-center">
+        <!-- Main Menu -->
+        <div id="main-menu" class="text-center transition-opacity duration-500 ease-in-out">
+            <h1 class="text-5xl font-bold mb-4">Blackjack</h1>
+            <p class="text-xl mb-8">Play against the dealer!</p>
+            <div class="space-y-4">
+                <button id="single-player-btn" class="button-primary w-64">Single Player</button>
+                <button id="multiplayer-btn" class="button-primary w-64">Multiplayer</button>
+            </div>
+        </div>
+
+        <!-- Player Input -->
+        <div id="player-input" class="hidden transition-opacity duration-500 ease-in-out w-full text-center">
+            <h2 id="input-title" class="text-3xl font-bold mb-4">How many players?</h2>
+            <div id="player-count-select" class="flex justify-center space-x-4 mb-8">
+                <button data-players="1" class="player-count-btn button-secondary">1</button>
+                <button data-players="2" class="player-count-btn button-secondary">2</button>
+                <button data-players="3" class="player-count-btn button-secondary">3</button>
+                <button data-players="4" class="player-count-btn button-secondary">4</button>
+                <button data-players="5" class="player-count-btn button-secondary">5</button>
+            </div>
+            <div id="username-input-container" class="space-y-4"></div>
+            <button id="start-game-btn" class="button-primary mt-8 hidden">Start Game</button>
+        </div>
+
+        <!-- Bet Modal -->
+        <div id="bet-modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4" id="bet-player-name"></h2>
+                <div class="flex items-center justify-center mb-4">
+                    <label for="bet-amount" class="text-lg mr-4">Bet Amount:</label>
+                    <input type="number" id="bet-amount" class="w-24 p-2 rounded-lg bg-gray-700 text-white text-center" min="1" max="20000" value="100">
+                </div>
+                <button id="place-bet-btn" class="button-primary w-48">Place Bet</button>
+            </div>
+        </div>
+
+        <!-- Game Table -->
+        <div id="game-table" class="hidden w-full transition-opacity duration-500 ease-in-out">
+            <div id="dealer-container" class="text-center mb-6">
+                <h2 class="text-2xl font-bold mb-2">Dealer</h2>
+                <div id="dealer-hand" class="flex justify-center items-center h-48 space-x-2"></div>
+                <div id="dealer-score" class="text-xl mt-2">Score: <span id="dealer-score-value"></span></div>
+            </div>
+
+            <div id="players-container" class="space-y-8"></div>
+            
+            <div class="mt-8 flex justify-center space-x-4">
+                <button id="hit-btn" class="button-primary hidden">Hit</button>
+                <button id="stop-btn" class="button-secondary hidden">Stop</button>
+                <button id="end-game-btn" class="button-primary hidden">End Game</button>
+            </div>
+        </div>
+
+        <!-- Results Modal -->
+        <div id="results-modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2 class="text-3xl font-bold mb-4">Game Over!</h2>
+                <div id="results-content" class="text-lg space-y-4 mb-6"></div>
+                <div class="space-y-4">
+                    <button id="play-again-btn" class="button-primary w-48">Play Again</button>
+                    <button id="main-menu-btn" class="button-secondary w-48">Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Box -->
+        <div id="message-box" class="fixed top-4 bg-gray-700 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
+
+    </div>
+
+    <script>
+        // Global state
+        let gameData = {};
+        const state = {
+            view: 'menu',
+            playerCount: 0,
+            players: [],
+            currentBetPlayer: null,
+            currentPlayerIndex: 0
+        };
+
+        const elements = {
+            mainMenu: document.getElementById('main-menu'),
+            playerInput: document.getElementById('player-input'),
+            playerCountSelect: document.getElementById('player-count-select'),
+            usernameInputContainer: document.getElementById('username-input-container'),
+            startGameBtn: document.getElementById('start-game-btn'),
+            betModal: document.getElementById('bet-modal-overlay'),
+            betPlayerName: document.getElementById('bet-player-name'),
+            betAmountInput: document.getElementById('bet-amount'),
+            placeBetBtn: document.getElementById('place-bet-btn'),
+            gameTable: document.getElementById('game-table'),
+            dealerHand: document.getElementById('dealer-hand'),
+            dealerScore: document.getElementById('dealer-score-value'),
+            playersContainer: document.getElementById('players-container'),
+            hitBtn: document.getElementById('hit-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            endGameBtn: document.getElementById('end-game-btn'),
+            resultsModal: document.getElementById('results-modal-overlay'),
+            resultsContent: document.getElementById('results-content'),
+            playAgainBtn: document.getElementById('play-again-btn'),
+            mainMenuBtn: document.getElementById('main-menu-btn'),
+            messageBox: document.getElementById('message-box'),
+        };
+
+        function showMessage(message, duration = 3000) {
+            elements.messageBox.textContent = message;
+            elements.messageBox.style.display = 'block';
+            setTimeout(() => {
+                elements.messageBox.style.display = 'none';
+            }, duration);
+        }
+
+        // Card rendering logic
+        function getCardHTML(card) {
+            if (card.rank === 'back') {
+                return `
+                    <div class="card card-back">
+                        <i class="fa-solid fa-sync fa-spin"></i>
+                    </div>
+                `;
+            }
+            const isRed = ['hearts', 'diamonds'].includes(card.suit);
+            const suitChar = {
+                'hearts': '♥',
+                'diamonds': '♦',
+                'clubs': '♣',
+                'spades': '♠'
+            };
+
+            return `
+                <div class="card ${isRed ? 'card-red' : 'card-black'}">
+                    <div class="card-suit-top">${suitChar[card.suit]}</div>
+                    <div class="card-rank">${card.rank.toUpperCase()}</div>
+                    <div class="card-suit-bottom self-end">${suitChar[card.suit]}</div>
+                </div>
+            `;
+        }
+
+        // View rendering
+        function render() {
+            elements.mainMenu.classList.add('hidden');
+            elements.playerInput.classList.add('hidden');
+            elements.gameTable.classList.add('hidden');
+            elements.betModal.classList.add('hidden');
+            elements.resultsModal.classList.add('hidden');
+
+            switch (state.view) {
+                case 'menu':
+                    elements.mainMenu.classList.remove('hidden');
+                    break;
+                case 'player-input':
+                    elements.playerInput.classList.remove('hidden');
+                    break;
+                case 'betting':
+                    elements.betModal.classList.remove('hidden');
+                    break;
+                case 'game':
+                    elements.gameTable.classList.remove('hidden');
+                    renderGameTable();
+                    break;
+                case 'results':
+                    elements.resultsModal.classList.remove('hidden');
+                    renderResults();
+                    break;
+            }
+        }
+
+        // Game table rendering
+        function renderGameTable() {
+            if (!gameData.players) return;
+
+            // Render Dealer
+            elements.dealerHand.innerHTML = gameData.dealer.hand.map(getCardHTML).join('');
+            elements.dealerScore.textContent = gameData.dealer.score;
+            
+            // Render Players
+            elements.playersContainer.innerHTML = gameData.players.map((player, index) => {
+                const isCurrent = player.name === gameData.current_player;
+                const handHTML = player.hand.map(getCardHTML).join('');
+                return `
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-2 ${isCurrent ? 'border-yellow-400' : 'border-transparent'}">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-xl font-semibold">${player.name}</h3>
+                                <p class="text-sm">(${isCurrent ? 'Your Turn' : 'Waiting'})</p>
+                            </div>
+                            <p class="text-sm text-gray-400">Balance: $${player.balance}</p>
+                        </div>
+                        <div class="flex justify-start space-x-2">
+                             <p class="text-lg">Score: ${player.score}</p>
+                             <p class="text-sm text-gray-400">Bet: $${player.bet}</p>
+                        </div>
+                        <div class="flex mt-4 items-center justify-start h-36">
+                            ${handHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Control button visibility
+            const isCurrentPlayerTurn = state.currentPlayerIndex < state.players.length;
+            elements.hitBtn.classList.toggle('hidden', !isCurrentPlayerTurn || gameData.game_over);
+            elements.stopBtn.classList.toggle('hidden', !isCurrentPlayerTurn || gameData.game_over);
+            elements.endGameBtn.classList.toggle('hidden', !gameData.game_over);
+        }
+
+        // Results rendering
+        function renderResults() {
+            if (!gameData.players) return;
+            let resultsHTML = '';
+            resultsHTML += `<p><strong>Dealer:</strong> Score: ${gameData.dealer.score}</p>`;
+            gameData.players.forEach(player => {
+                const history = player.history[player.history.length - 1];
+                resultsHTML += `<p><strong>${player.name}:</strong> Score: ${player.score}, ${history.result}</p>`;
+            });
+            elements.resultsContent.innerHTML = resultsHTML;
+        }
+
+        // API calls
+        async function fetchGameState() {
+            try {
+                const response = await fetch('/api/state');
+                gameData = await response.json();
+                renderGameTable();
+                
+                // Check if it's the dealer's turn
+                if (gameData.current_player === 'Dealer' && !gameData.game_over) {
+                    await fetch('/api/dealer_turn', { method: 'POST' });
+                    gameData = await (await fetch('/api/state')).json();
+                    if (gameData.game_over) {
+                        state.view = 'results';
+                        render();
+                    } else {
+                        renderGameTable();
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch game state:", error);
+                showMessage("Connection error. Please try again.");
+            }
+        }
+
+        async function fetchStartGame() {
+            const players = state.players.map(p => p.name);
+            const response = await fetch('/api/start_game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ players: players })
+            });
+            gameData = await response.json();
+            
+            // Start betting phase
+            state.currentPlayerIndex = 0;
+            state.currentBetPlayer = state.players[state.currentPlayerIndex];
+            elements.betPlayerName.textContent = state.currentBetPlayer.name;
+            elements.betAmountInput.value = 100;
+            state.view = 'betting';
+            render();
+        }
+
+        async function fetchHit() {
+            const response = await fetch('/api/hit', { method: 'POST' });
+            gameData = await response.json();
+            
+            const currentPlayer = gameData.players.find(p => p.name === gameData.current_player);
+            if (currentPlayer.stopped) {
+                state.currentPlayerIndex++;
+                if (state.currentPlayerIndex >= state.players.length) {
+                    await fetchDealerTurn();
+                }
+            }
+            renderGameTable();
+        }
+
+        async function fetchStop() {
+            const response = await fetch('/api/stop', { method: 'POST' });
+            gameData = await response.json();
+            state.currentPlayerIndex++;
+            if (state.currentPlayerIndex >= state.players.length) {
+                await fetchDealerTurn();
+            }
+            renderGameTable();
+        }
+
+        async function fetchDealerTurn() {
+            const response = await fetch('/api/dealer_turn', { method: 'POST' });
+            gameData = await response.json();
+            state.view = 'results';
+            render();
+        }
+
+        // Event Listeners
+        document.getElementById('single-player-btn').addEventListener('click', () => {
+            state.view = 'player-input';
+            state.playerCount = 1;
+            renderPlayerInputs();
+            render();
+        });
+
+        document.getElementById('multiplayer-btn').addEventListener('click', () => {
+            state.view = 'player-input';
+            state.playerCount = 0; // Let user choose
+            renderPlayerInputs();
+            render();
+        });
+
+        elements.playerCountSelect.addEventListener('click', (e) => {
+            if (e.target.matches('.player-count-btn')) {
+                state.playerCount = parseInt(e.target.dataset.players, 10);
+                document.querySelectorAll('.player-count-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600');
+                    btn.classList.add('bg-gray-600');
+                });
+                e.target.classList.remove('bg-gray-600');
+                e.target.classList.add('bg-blue-600');
+                renderPlayerInputs();
+            }
+        });
+
+        function renderPlayerInputs() {
+            const container = elements.usernameInputContainer;
+            container.innerHTML = '';
+            state.players = [];
+            if (state.playerCount > 0) {
+                for (let i = 0; i < state.playerCount; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = `Player ${i + 1} Username`;
+                    input.classList = 'w-64 p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition';
+                    input.dataset.index = i;
+                    container.appendChild(input);
+                }
+                elements.startGameBtn.classList.remove('hidden');
+            } else {
+                elements.startGameBtn.classList.add('hidden');
+            }
+        }
+
+        elements.startGameBtn.addEventListener('click', () => {
+            state.players = Array.from(elements.usernameInputContainer.querySelectorAll('input')).map(input => ({ name: input.value }));
+            const validPlayers = state.players.filter(p => p.name.trim() !== '');
+            if (validPlayers.length > 0) {
+                state.players = validPlayers;
+                fetchStartGame();
+            } else {
+                showMessage("Please enter at least one username.");
+            }
+        });
+
+        elements.placeBetBtn.addEventListener('click', async () => {
+            const betAmount = parseInt(elements.betAmountInput.value, 10);
+            if (betAmount > 0) {
+                try {
+                    const response = await fetch('/api/place_bet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ player: state.currentBetPlayer.name, bet: betAmount })
+                    });
+                    gameData = await response.json();
+                    
+                    state.currentPlayerIndex++;
+                    if (state.currentPlayerIndex < state.players.length) {
+                        state.currentBetPlayer = state.players[state.currentPlayerIndex];
+                        elements.betPlayerName.textContent = state.currentBetPlayer.name;
+                    } else {
+                        state.view = 'game';
+                        render();
+                        // Initial game state render
+                        fetchGameState(); 
+                    }
+                } catch (error) {
+                    showMessage("Error placing bet. Please try again.");
+                }
+            } else {
+                showMessage("Bet amount must be greater than 0.");
+            }
+        });
+
+        elements.hitBtn.addEventListener('click', fetchHit);
+        elements.stopBtn.addEventListener('click', fetchStop);
+        elements.endGameBtn.addEventListener('click', async () => {
+            await fetch('/api/reset', { method: 'POST' });
+            state.view = 'menu';
+            render();
+        });
+
+        elements.playAgainBtn.addEventListener('click', () => {
+            fetch('/api/reset', { method: 'POST' }).then(() => {
+                fetchStartGame();
+            });
+        });
+
+        elements.mainMenuBtn.addEventListener('click', () => {
+            fetch('/api/reset', { method: 'POST' }).then(() => {
+                state.view = 'menu';
+                render();
+            });
+        });
+
+        // Initial render
+        render();
+
+    </script>
+</body>
+</html>
